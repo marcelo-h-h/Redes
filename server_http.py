@@ -22,13 +22,26 @@ Content-Type: text/html
 
 """ #Default HTTP Header + Hello World page
 
+def buildPage(method, path, destination):
+    if(method.decode('ascii') == 'GET'):
+        pagePath = 'html' + path.decode('ascii')
+        try:
+            with open(pagePath, 'rb') as f:
+                destination.sendfile(f,0)
+        except FileNotFoundError:
+            print('This page has not been found')
+        except IsADirectoryError:
+            print('This is not a page')
+    else:
+        destination.send(b'A failure occurried')
+
 
 try:
 
     while True:
         client_sokt, addr = sokt.accept() #Wait for incomming conection
-        received_requisition = client_sokt.recv(2000) #Receive requisition from client
-        print (")Received data: \n", received_requisition) #Shows the requisition on console
+        received_requisition = client_sokt.recv(1500) #Receive requisition from client (1500 bytes is the typical network layer limit)
+        print ("Received data: \n", received_requisition) #Shows the requisition on console
 
         method, path, other = received_requisition.split(b' ', 2)
         if other.startswith(b'HTTP/1.1'):
@@ -40,7 +53,11 @@ try:
             </html>
             """
             client_sokt.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n' % len(body_content))
-            client_sokt.send(body_content)
+           # client_sokt.send(body_content)
+           # with open('html/home.html', 'rb') as f:
+                #client_sokt.sendfile(f, 0)
+            buildPage(method, path, client_sokt)
+            #client_sokt.sendfile(buildPage(method, path), 0)
 
         else:
             print('Invalid HTTP request')
