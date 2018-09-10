@@ -29,7 +29,7 @@ def buildPage(method, path, destination):
             with open(pagePath, 'rb') as f:
                 destination.sendfile(f,0)
         except FileNotFoundError:
-            print('The page has not been found')
+            destination.sendfile(open('../html/error.html', 'rb'), 0)
         except IsADirectoryError:
             print('This is not a valid page')
     else:
