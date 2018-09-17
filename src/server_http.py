@@ -29,9 +29,9 @@ def buildPage(method, path, destination):
             with open(pagePath, 'rb') as f:
                 destination.sendfile(f,0)
         except FileNotFoundError:
-            destination.sendfile(open('../html/error.html', 'rb'), 0)
+            destination.sendfile(open('../html/error404.html', 'rb'), 0)
         except IsADirectoryError:
-            print('This is not a valid page')
+            destination.sendfile(open('../html/error400.html', 'rb'), 0)
     else:
         destination.send(b'A failure occurried')
 
