@@ -1,17 +1,78 @@
-<!DOCTYPE HTML>
-
+<!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="UTF-8">
-		<title>Homepage of user domain</title>
-	</head>
+    <head>
+        <title>Sample page</title>
+        <meta charset="uft-8">
+        <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+        <script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 
-	<body>
-		<h1> This is a default page loaded to ensure that it is being loaded by the python function </h1>
-
-		<p>This is a default paragraph</p>
-
-	</body>
-
+        <style>
+                html,body{
+                    background:#000;
+                    margin:0;
+                }
+                p,h1,h3 {
+                    color: antiquewhite;
+                }
+                .centered{
+                    width:400px;
+                    height:400px;
+                    position:absolute;
+                    top:50%;
+                    left:50%;
+                    transform:translate(-50%,-50%);
+                    background:#000;
+                    filter: blur(10px) contrast(20);
+                }
+                .blob-1,.blob-2{
+                    width:70px;
+                    height:70px;
+                    position:absolute;
+                    background:#fff;
+                    border-radius:50%;
+                    top:50%;left:50%;
+                    transform:translate(-50%,-50%);
+                }
+                .blob-1{
+                    left:20%;
+                    animation:osc-l 3.5s ease infinite;
+                }
+                .blob-2{
+                    left:80%;
+                    animation:osc-r 3.5s ease infinite;
+                    background:rgb(192, 120, 52);
+                }
+                @keyframes osc-l{
+                    0%{left:20%;}
+                    50%{left:50%;}
+                    100%{left:20%;}
+                }
+                @keyframes osc-r{
+                    0%{left:80%;}
+                    50%{left:50%;}
+                    100%{left:80%;}
+                }
+            </style>
+       
+    </head>
+    <body>
+        <div class="container">
+            <h1> T1 Redes de Computadores</h1>
+            <h3>Equipe:</h3>
+            <p>Marcelo H. H. M. de Oliveira</p>
+            <p>Isadora Gallerani</p>
+            <p>Gabrieli Santos</p>
+        </div>
+        <div class="container">
+            <div class="row text-center">
+            <div class = "centered">
+            <div class = "blob-1"></div>
+            <div class = "blob-2"></div>
+        </div>
+            </div>
+        </div>
+    </body>
 </html>
+
 
