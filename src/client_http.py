@@ -13,6 +13,5 @@ while True:
     if not recv:
         break
     response += recv.decode("utf-8")
-
-print (response)
+    print (response)
 client_socket.close()  

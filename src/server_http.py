@@ -22,18 +22,26 @@ Content-Type: text/html
 
 """ #Default HTTP Header + Hello World page
 
+body_content = ""
+
 def buildPage(method, path, destination):
     if(method.decode('ascii') == 'GET'):
         pagePath = '../html' + path.decode('ascii')
+        print("caminho: ", pagePath)
         try:
             with open(pagePath, 'rb') as f:
                 destination.sendfile(f,0)
+                f.close()
         except FileNotFoundError:
             destination.sendfile(open('../html/error404.html', 'rb'), 0)
         except IsADirectoryError:
             destination.sendfile(open('../html/error400.html', 'rb'), 0)
+    elif(method.decode('ascii') == 'POST'):
+        destination.sendfile(open('../html/error405.html', 'rb'), 0)
     else:
         destination.send(b'A failure occurried')
+
+    return
 
 def main():
     try:
@@ -45,23 +53,12 @@ def main():
 
             method, path, other = received_requisition.split(b' ', 2)
             if other.startswith(b'HTTP/1.1'):
-                body_content = b"""
-                <html>
-                <body>
-                <b>Conection Sucefull</b>
-                </body>
-                </html>
-                """
-                client_sokt.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n' % len(body_content))
-            # client_sokt.send(body_content)
-            # with open('html/home.html', 'rb') as f:
-                    #client_sokt.sendfile(f, 0)
+                client_sokt.send(b'HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: 1024\r\n\r\n')
                 buildPage(method, path, client_sokt)
-                #client_sokt.sendfile(buildPage(method, path), 0)
-
             else:
                 print('Invalid HTTP request')
                 client_sokt.send(default_msg)
+            client_sokt.close()
         
         sokt.close()
         print('Conection closed')
