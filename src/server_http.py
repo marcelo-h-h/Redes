@@ -27,7 +27,6 @@ body_content = ""
 def buildPage(method, path, destination):
     if(method.decode('ascii') == 'GET'):
         pagePath = '../html' + path.decode('ascii')
-        print("caminho: ", pagePath)
         try:
             with open(pagePath, 'rb') as f:
                 destination.sendfile(f,0)
