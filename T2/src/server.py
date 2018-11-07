@@ -21,8 +21,6 @@ FLAGS_ACK = 1<<4
 MSS = 1460
 BUFFER_SIZE = MSS * 5
 
-TESTAR_PERDA_ENVIO = False
-
 
 class Conexao:
     def __init__(self, id_conexao, seq_no, ack_no):
@@ -42,7 +40,7 @@ class Conexao:
         self.departure_time = None #Armazena o momento em que é enviado o payload nessa conexão
         self.buffer = bytes()
 
-        self.send_queue = b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 146000\r\n\r\n" + 146000 * b"a"
+        self.send_queue = b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 15000\r\n\r\n" + 15001 * b"a"
 conexoes = {}
 
 
