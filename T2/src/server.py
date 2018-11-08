@@ -40,7 +40,9 @@ class Conexao:
         self.departure_time = None #Armazena o momento em que é enviado o payload nessa conexão
         self.buffer = bytes()
 
-        self.send_queue = b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 15000\r\n\r\n" + 15001 * b"a"
+        self.send_queue = b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n" + 15000 * b"a"
+        #self.send_queue = b"HTTP/1.0 200 OK\r\n\r\nTeste"
+        self.send_callback = None
 conexoes = {}
 
 
@@ -58,6 +60,7 @@ def set_timer(conexao):
     else:
         conexao.departure_time == False
 
+#Define a janela de congestionamento
 def set_congest_window(conexao):
     if conexao.departure_time != False and conexao.congest_window < conexao.ssthreshold:
         sent_size = min(conexao.congest_window, conexao.receiv_window, len(conexao.send_queue))
@@ -66,7 +69,8 @@ def set_congest_window(conexao):
         conexao.ssthreshold = max(congest_window/2, 2*MSS)
         conexao.congest_window = MSS
 
-def set_rto(conexao): #Calculo do RTO de acordo com RFC2988
+#Calculo do RTO de acordo com RFC2988
+def set_rto(conexao): 
     if conexao.departure_time != False and conexao.departure_time is not None:
         r = time.time() - conexao.departure_time
 
@@ -94,19 +98,19 @@ def handle_ipv4_header(packet):
     return src_addr, dst_addr, segment
 
 #Prepara o pacote vazio com ACK
-def make_ack(src_port, dst_port, seq_no, ack_no, window_size): #Prepare ack packet
+def make_ack(src_port, dst_port, seq_no, ack_no, window_size): 
     return struct.pack('!HHIIHHHH', src_port, dst_port, seq_no,
                        ack_no, (5<<12)|FLAGS_ACK,
                        window_size, 0, 0)
 
 #Prepara o pacote vazio com SYN + ACK
-def make_synack(src_port, dst_port, seq_no, ack_no, window_size): #Prepare Synack packet
+def make_synack(src_port, dst_port, seq_no, ack_no, window_size): 
     return struct.pack('!HHIIHHHH', src_port, dst_port, seq_no,
                        ack_no, (5<<12)|FLAGS_ACK|FLAGS_SYN,
                        window_size, 0, 0)
 
 #Prepara o pacote vazio com FIN + ACk
-def make_finack(src_port, dst_port, seq_no, ack_no, window_size): #Prepare Finack packet
+def make_finack(src_port, dst_port, seq_no, ack_no, window_size): 
     return struct.pack('!HHIIHHHH', src_port, dst_port, seq_no,
                        ack_no, (5<<12)|FLAGS_ACK|FLAGS_FIN,
                        window_size, 0, 0)
@@ -138,10 +142,11 @@ def send_next(fd, conexao):
     #Parse nos dados da conexão
     (dst_addr, dst_port, src_addr, src_port) = conexao.id_conexao
 
-     #Prepara o payload com os primeiros dados na fila com um limite de encher a janela de congestionamento
+    #Prepara o payload com os primeiros dados na fila com um limite de encher a janela de congestionamento
     payload = conexao.send_queue[:conexao.congest_window]
 
     set_timer(conexao)
+
     #Empacota e envia os dados advindos da fila de envio da conexão, com o tamanho máximo permitido até preencher um buffer correspondente à janela
     for i in range(0, min(conexao.congest_window, conexao.receiv_window, len(conexao.send_queue)),MSS):
         data = payload[i:i+MSS]
@@ -196,9 +201,9 @@ def raw_recv(fd):
         conexao.ack_no += len(payload)
         sent_size = min(conexao.congest_window, conexao.receiv_window, len(conexao.send_queue))
 
-        #Caso a conexão receba um FIN do cliente, envia o finack e termina a conexão
+        #Caso a conexão receba um FIN do cliente, envia o ACK (supondo que já enviamos o FIN do servidor para o cliente primeiro)
         if (flags & FLAGS_FIN) == FLAGS_FIN:
-            fd.sendto(fix_checksum(make_finack(dst_port, src_port, conexao.seq_no, conexao.ack_no+1, BUFFER_SIZE-len(conexao.buffer)),
+            fd.sendto(fix_checksum(make_ack(dst_port, src_port, conexao.seq_no, conexao.ack_no+1, BUFFER_SIZE-len(conexao.buffer)),
                                    src_addr, dst_addr), (src_addr, src_port))
             conexao.status = 2
             print('Enviado finack\n')
@@ -215,10 +220,16 @@ def raw_recv(fd):
                 conexao.seq_no += sent_size
                 conexao.send_queue = conexao.send_queue[sent_size:]
 
-                conexao.send_callback.cancel()
+                if conexao.send_callback:
+                    conexao.send_callback.cancel()
 
                 if conexao.send_queue != b'':
                     conexao.send_callback = asyncio.get_event_loop().call_soon(send_next, fd, conexao)
+                else:
+                    fd.sendto(fix_checksum(make_finack(dst_port, src_port, conexao.seq_no, conexao.ack_no, BUFFER_SIZE-len(conexao.buffer)),
+                                   src_addr, dst_addr), (src_addr, src_port))
+                    conexao.seq_no += 1
+                    print('Termino do envio, queue vazia')
             elif payload != b'': 
                 fd.sendto(fix_checksum(make_ack(dst_port, src_port, conexao.seq_no, conexao.ack_no, BUFFER_SIZE-len(conexao.buffer)),
                                    src_addr, dst_addr), (src_addr, src_port))
