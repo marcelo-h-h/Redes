@@ -28,7 +28,7 @@ class Conexao:
         self.seq_no = seq_no
         self.ack_no = ack_no
         
-        self.status = 0 #Define o status da conexão (0: Desconectado, 1: Conectando, 2: Conexão Estabelecida)
+        self.status = 0 #Define o status da conexão (0: Conectando, 1: Conexão Estabelecida, 2:Desconectado)
 
         self.rto = 3 #Até que o RTT seja medido com um segmento válido, deve ser atribuido 3. (RFC2988)
         self.srtt = None #Variável usada no cálculo do RTO
@@ -40,7 +40,7 @@ class Conexao:
         self.departure_time = None #Armazena o momento em que é enviado o payload nessa conexão
         self.buffer = bytes()
 
-        self.send_queue = b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n" + 15000 * b"a"
+        self.send_queue = b"HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n" + 1500 * b"  (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    (J@>@)J~|__|    \n\n\n"
         #self.send_queue = b"HTTP/1.0 200 OK\r\n\r\nTeste"
         self.send_callback = None
 conexoes = {}
