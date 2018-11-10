@@ -10,14 +10,25 @@
 import socket
 import asyncio
 import struct
+import sys
 
+FLAGS_MOREFRAGS = 1<<0
 
 ETH_P_IP = 0x0800
 
-offsets = set()
+class Package:
+    def __init__(self):
+        self.offsets = set()
+        self.timer = None
+        self.buffer = bytearray()
+        self.data_lenght = 0
+
+pacotes = {}
+
+
 
 # Coloque aqui o endereço de destino para onde você quer mandar o ping
-dest_addr = '127.0.0.1'
+dest_addr = '192.168.0.1'
 
 def addr2str(addr):
     return '%d.%d.%d.%d' % tuple(int(x) for x in addr)
@@ -32,8 +43,8 @@ def handle_ipv4_header(packet):
     assert version == 4
     total_length = packet[2:4]
     identifier = packet[4:6]
-    flags = (packet[6:8] & 0x000f) &  0b0111
-    offset = (packet[6:8] & 0xffff) & 0b1000 
+    flags = packet[6] >> 5
+    offset = int.from_bytes(packet[6:8], byteorder='big', signed=False) & 0x1fff
     src_addr = addr2str(packet[12:16])
     dst_addr = addr2str(packet[16:20])
     segment = packet[4*ihl:]
@@ -48,11 +59,31 @@ def send_ping(send_fd):
 
     asyncio.get_event_loop().call_later(3, send_ping, send_fd)
 
-
 def raw_recv(recv_fd):
     packet = recv_fd.recv(12000)
     total_length, identifier, flags, offset, src_addr, dst_addr, segment = handle_ipv4_header(packet)
-    print('recebido pacote de %d bytes' % len(packet))
+
+    id_package = (src_addr, identifier)
+
+    if src_addr == dest_addr and id_package not in pacotes:
+        pacotes[id_package] = pacote = Package()
+
+        pacote.data_lenght = total_length - ihl
+        pacote.offsets.add(offset)
+
+        #TODO
+        #set_timer(package)
+
+
+        print('recebido pacote de %d bytes' % len(packet))
+        print(src_addr)
+        print('offset = ', offset)
+        print('Total lenght = ', total_length)
+
+        if (flags & FLAGS_MOREFRAGS) == FLAGS_MOREFRAGS or offset != 0:
+            print ('Fragmented') #pacote fragmentado
+
+
 
 
 def calc_checksum(segment):
