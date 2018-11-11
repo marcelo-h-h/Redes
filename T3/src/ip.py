@@ -87,43 +87,47 @@ def check_timeouts():
 def raw_recv(recv_fd):
     packet = recv_fd.recv(12000)
     total_length, identifier, flags, offset, src_addr, dst_addr, segment = handle_ipv4_header(packet)
+    if(src_addr == dest_addr): #Filtrando apenas o tráfego ao roteador que recebe o ping para fins de melhor visualização
+        if (flags & FLAGS_MOREFRAGS) == FLAGS_MOREFRAGS or offset != 0: #Pacote fragmentado
+            print('recebido fragmento de %d bytes' % len(packet))
+            id_package = (src_addr, identifier)
+            if id_package not in pacotes:
+                pacotes[id_package] = pacote = Package()
+            else:
+                pacote = pacotes[id_package]
+            if pacote.timer is None:
+                set_timer(pacote)
+            #manter um conjunto de offsets para poder ignorar pacotes duplicados
+            if offset not in pacote.offsets:
+                if offset != 0 and (flags & FLAGS_MOREFRAGS) == 0:  #Caso seja o ultimo pacote
+                    print('Ultimo fragmento recebido')
+                    pacote.total_data_length = offset + len(segment)
+                pacote.data_length += len(segment)
+                pacote.offsets.add(offset)
 
-    if (flags & FLAGS_MOREFRAGS) == FLAGS_MOREFRAGS or offset != 0: #Pacote fragmentado
-        print('recebido fragmento de %d bytes' % len(packet))
-        id_package = (src_addr, identifier)
-        if id_package not in pacotes:
-            pacotes[id_package] = pacote = Package()
-        else:
-            pacote = pacotes[id_package]
-        if pacote.timer is None:
-            set_timer(pacote)
-        #manter um conjunto de offsets para poder ignorar pacotes duplicados
-        if src_addr == dest_addr and offset not in pacote.offsets:
-            if offset != 0 and (flags & FLAGS_MOREFRAGS) == 0:  #Caso seja o ultimo pacote
-                print('Ultimo fragmento recebido')
-                pacote.total_data_length = offset + len(segment)
-            pacote.data_length += len(segment)
-            pacote.offsets.add(offset)
+                while len(pacote.buffer) < offset + len(segment):
+                    pacote.buffer.append(0)
+                pacote.buffer[offset:offset+len(segment)] = segment
+                print('Adicionado o pacote com comprimento: ', len(segment), 'ao buffer, que passa a ter ', len(pacote.buffer))
 
-            while len(pacote.buffer) < offset + len(segment):
-                pacote.buffer.append(0)
-            pacote.buffer[offset:offset+len(segment)] = segment
-            print('Adicionado o pacote com comprimento: ', len(segment), 'ao buffer, que passa a ter ', len(pacote.buffer))
+                if pacote.total_data_length == pacote.data_length:  #Caso já tenha recebido todos os fragmentos
+                    print('O buffer está completo, informações do pacote recebido:')
+                    print('\tFonte:', src_addr)
+                    print('\tIdentificador', identifier)
+                    print('\ttamanho remontado:', len(pacote.buffer))
+                    print('\tTamanho dos dados: ', len(pacote.buffer))
+                    print('\tConteúdo: ', pacote.buffer)
 
-            if pacote.total_data_length == pacote.data_length:  #Caso já tenha recebido todos os fragmentos
-                print('O buffer está completo, informações do pacote recebido:')
-                print('\tFonte:', src_addr)
-                print('\ttamanho remontado:', len(pacote.buffer))
-                print('\tTamanho dos dados: ', len(pacote.buffer))
-                del pacotes[id_package]
-                print('\n')
+                    del pacotes[id_package]
+                    print('\n')
 
-    else: #Pacote não fragmentado
-        if(src_addr == dest_addr):
+        else: #Pacote não fragmentado
             print('Não fragmentado')
             print('Informações do pacote:')
             print('\tFonte: ', src_addr)
+            print('\tIdentificador', identifier)
             print('\tTamanho dos dados: ', len(segment))
+            print('\tConteúdo: ', segment)
             print('\n')
 
 
