@@ -60,45 +60,49 @@ def raw_recv(recv_fd):
     packet = recv_fd.recv(12000)
     total_length, identifier, flags, offset, src_addr, dst_addr, segment = handle_ipv4_header(packet)
 
-    id_package = (src_addr, identifier)
-    if id_package not in pacotes:
-        pacotes[id_package] = pacote = Package()
+    if (flags & FLAGS_MOREFRAGS) == FLAGS_MOREFRAGS or offset != 0: #Pacote fragmentado
+        print('recebido fragmento de %d bytes' % len(packet))
+        id_package = (src_addr, identifier)
+        if id_package not in pacotes:
+            pacotes[id_package] = pacote = Package()
+        else:
+            pacote = pacotes[id_package]
+        #manter um conjunto de offsets para poder ignorar pacotes duplicados
+        if src_addr == dest_addr and offset not in pacote.offsets:
+            if offset != 0 and (flags & FLAGS_MOREFRAGS) == 0:  #Caso seja o ultimo pacote
+                print('Ultimo pacote recebido')
+                pacote.total_data_length = offset + len(segment)
+            pacote.data_length += len(segment)
+            pacote.offsets.add(offset)
+
+            while len(pacote.buffer) < offset + len(segment):
+                pacote.buffer.append(0)
+            pacote.buffer[offset:offset+len(segment)] = segment
+            print('Adicionado o pacote com comprimento: ', len(segment), 'ao buffer, que passa a ter ', len(pacote.buffer))
+
+            if pacote.total_data_length == pacote.data_length:  #Caso já tenha recebido todos os fragmentos
+                print('O buffer está completo, informações do pacote recebido:')
+                print('\tFonte:', src_addr)
+                print('\ttamanho remontado:', len(pacote.buffer))
+                print('\tFonte: ', src_addr)
+                print('\tTamanho dos dados: ', len(segment))
+                del pacotes[id_package]
+                
+
+            
+
+            #TODO
+            #set_timer(package)
+
+
     else:
-        pacote = pacotes[id_package]
-    #manter um conjunto de offsets para poder ignorar pacotes duplicados
-    if src_addr == dest_addr and offset not in pacote.offsets:
-        if offset != 0 and (flags & FLAGS_MOREFRAGS) == 0:  #Caso seja o ultimo pacote
-            print('Ultimo pacote recebido')
-            pacote.total_data_length = offset * 8 + len(segment)
-        pacote.data_length += len(segment)
-        pacote.offsets.add(offset)
-
-        while len(pacote.buffer) < offset + len(segment):
-            pacote.buffer.append(0)
-        pacote.buffer[offset:offset+len(segment)] = segment
-        print('Adicionado o pacote com comprimento: ', len(segment), 'ao buffer, que passa a ter ', len(pacote.buffer))
-        #DOING: Posicionar os dados do pacote na posição correspondente do buffer
-
-
-        if pacote.total_data_length == pacote.data_length:  #Caso já tenha recebido todos os fragmentos
-            print('tamanho remontado:', len(pacote.buffer))
-            
-            
+        if(src_addr == dest_addr):
+            print('Não fragmentado')
+            print('Informações do pacote:')
+            print('\tFonte: ', src_addr)
+            print('\tTamanho dos dados: ', len(segment))
 
         
-
-        #TODO
-        #set_timer(package)
-
-
-        print('recebido pacote de %d bytes' % len(packet))
-        print(src_addr)
-        print('offset = ', offset)
-        print('Total length = ', total_length)
-       # print('segment = ', segment)
-
-        if (flags & FLAGS_MOREFRAGS) == FLAGS_MOREFRAGS or offset != 0:
-            print ('Fragmented') #pacote fragmentado
 
 
 
