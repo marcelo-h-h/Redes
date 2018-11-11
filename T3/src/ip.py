@@ -1,8 +1,4 @@
 #sudo ip link set lo mtu 1500
-#manter um conjunto de offsets para poder ignorar pacotes duplicados
-#offsets = set()
-#offset in offsets
-#offsets.add(offset)
 #Quando chegar o primeiro fragmento, inicia um timer
 #Se demorar mais de 30 segundos, descarta tudo que recebeu e desiste de remontar o datagrama
 
@@ -21,7 +17,8 @@ class Package:
         self.offsets = set()
         self.timer = None
         self.buffer = bytearray()
-        self.data_lenght = 0
+        self.data_length = 0
+        self.total_data_length = None
 
 pacotes = {}
 
@@ -64,12 +61,30 @@ def raw_recv(recv_fd):
     total_length, identifier, flags, offset, src_addr, dst_addr, segment = handle_ipv4_header(packet)
 
     id_package = (src_addr, identifier)
-
-    if src_addr == dest_addr and id_package not in pacotes:
+    if id_package not in pacotes:
         pacotes[id_package] = pacote = Package()
-
-        pacote.data_lenght = total_length - ihl
+    else:
+        pacote = pacotes[id_package]
+    #manter um conjunto de offsets para poder ignorar pacotes duplicados
+    if src_addr == dest_addr and offset not in pacote.offsets:
+        if offset != 0 and (flags & FLAGS_MOREFRAGS) == 0:  #Caso seja o ultimo pacote
+            print('Ultimo pacote recebido')
+            pacote.total_data_length = offset * 8 + len(segment)
+        pacote.data_length += len(segment)
         pacote.offsets.add(offset)
+
+        while len(pacote.buffer) < offset + len(segment):
+            pacote.buffer.append(0)
+        pacote.buffer[offset:offset+len(segment)] = segment
+        #DOING: Posicionar os dados do pacote na posição correspondente do buffer
+
+
+        if pacote.total_data_length == pacote.data_length:  #Caso já tenha recebido todos os fragmentos
+            print('tamanho remontado:', len(pacote.buffer))
+            
+            
+
+        
 
         #TODO
         #set_timer(package)
@@ -78,7 +93,8 @@ def raw_recv(recv_fd):
         print('recebido pacote de %d bytes' % len(packet))
         print(src_addr)
         print('offset = ', offset)
-        print('Total lenght = ', total_length)
+        print('Total length = ', total_length)
+       # print('segment = ', segment)
 
         if (flags & FLAGS_MOREFRAGS) == FLAGS_MOREFRAGS or offset != 0:
             print ('Fragmented') #pacote fragmentado
