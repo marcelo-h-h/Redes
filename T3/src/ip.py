@@ -41,7 +41,7 @@ def handle_ipv4_header(packet):
     total_length = packet[2:4]
     identifier = packet[4:6]
     flags = packet[6] >> 5
-    offset = int.from_bytes(packet[6:8], byteorder='big', signed=False) & 0x1fff
+    offset = (int.from_bytes(packet[6:8], byteorder='big', signed=False) & 0x1fff) << 3
     src_addr = addr2str(packet[12:16])
     dst_addr = addr2str(packet[16:20])
     segment = packet[4*ihl:]
@@ -76,6 +76,7 @@ def raw_recv(recv_fd):
         while len(pacote.buffer) < offset + len(segment):
             pacote.buffer.append(0)
         pacote.buffer[offset:offset+len(segment)] = segment
+        print('Adicionado o pacote com comprimento: ', len(segment), 'ao buffer, que passa a ter ', len(pacote.buffer))
         #DOING: Posicionar os dados do pacote na posição correspondente do buffer
 
 
