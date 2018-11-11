@@ -1,16 +1,20 @@
-#sudo ip link set lo mtu 1500
-#Quando chegar o primeiro fragmento, inicia um timer
-#Se demorar mais de 30 segundos, descarta tudo que recebeu e desiste de remontar o datagrama
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#Para limitar o tamanho dos pacotes que chegam por loopback, use:
+# sudo ip link set lo mtu 1500
 
 
 import socket
 import asyncio
 import struct
 import sys
+import time
 
 FLAGS_MOREFRAGS = 1<<0
 
 ETH_P_IP = 0x0800
+
+DATAGRAM_TIMEOUT = 15 #(RFC0791)
 
 class Package:
     def __init__(self):
@@ -47,6 +51,19 @@ def handle_ipv4_header(packet):
     segment = packet[4*ihl:]
     return total_length, identifier, flags, offset, src_addr, dst_addr, segment
 
+def calc_checksum(segment):
+    if len(segment) % 2 == 1:
+        # se for ímpar, faz padding à direita
+        segment += b'\x00'
+    checksum = 0
+    for i in range(0, len(segment), 2):
+        x, = struct.unpack('!H', segment[i:i+2])
+        checksum += x
+        while checksum > 0xffff:
+            checksum = (checksum & 0xffff) + 1
+    checksum = ~checksum
+    return checksum & 0xffff    
+
 def send_ping(send_fd):
     print('enviando ping')
     # Exemplo de pacote ping (ICMP echo request) com payload grande
@@ -55,6 +72,17 @@ def send_ping(send_fd):
     send_fd.sendto(msg, (dest_addr, 0))
 
     asyncio.get_event_loop().call_later(3, send_ping, send_fd)
+
+def set_timer(pacote):
+    if pacote.timer == None:
+        pacote.timer = time.time()
+    
+def check_timeouts():
+    for id_pacote in pacotes:
+        if time.time() - pacotes[id_pacote].timer > DATAGRAM_TIMEOUT:
+            del pacotes[id_pacote]
+    #print('Checando timeouts')
+    asyncio.get_event_loop().call_later(1,check_timeouts)
 
 def raw_recv(recv_fd):
     packet = recv_fd.recv(12000)
@@ -67,10 +95,12 @@ def raw_recv(recv_fd):
             pacotes[id_package] = pacote = Package()
         else:
             pacote = pacotes[id_package]
+        if pacote.timer is None:
+            set_timer(pacote)
         #manter um conjunto de offsets para poder ignorar pacotes duplicados
         if src_addr == dest_addr and offset not in pacote.offsets:
             if offset != 0 and (flags & FLAGS_MOREFRAGS) == 0:  #Caso seja o ultimo pacote
-                print('Ultimo pacote recebido')
+                print('Ultimo fragmento recebido')
                 pacote.total_data_length = offset + len(segment)
             pacote.data_length += len(segment)
             pacote.offsets.add(offset)
@@ -84,41 +114,18 @@ def raw_recv(recv_fd):
                 print('O buffer está completo, informações do pacote recebido:')
                 print('\tFonte:', src_addr)
                 print('\ttamanho remontado:', len(pacote.buffer))
-                print('\tFonte: ', src_addr)
-                print('\tTamanho dos dados: ', len(segment))
+                print('\tTamanho dos dados: ', len(pacote.buffer))
                 del pacotes[id_package]
-                
+                print('\n')
 
-            
-
-            #TODO
-            #set_timer(package)
-
-
-    else:
+    else: #Pacote não fragmentado
         if(src_addr == dest_addr):
             print('Não fragmentado')
             print('Informações do pacote:')
             print('\tFonte: ', src_addr)
             print('\tTamanho dos dados: ', len(segment))
+            print('\n')
 
-        
-
-
-
-
-def calc_checksum(segment):
-    if len(segment) % 2 == 1:
-        # se for ímpar, faz padding à direita
-        segment += b'\x00'
-    checksum = 0
-    for i in range(0, len(segment), 2):
-        x, = struct.unpack('!H', segment[i:i+2])
-        checksum += x
-        while checksum > 0xffff:
-            checksum = (checksum & 0xffff) + 1
-    checksum = ~checksum
-    return checksum & 0xffff
 
 
 if __name__ == '__main__':
@@ -143,4 +150,5 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.add_reader(recv_fd, raw_recv, recv_fd)
     asyncio.get_event_loop().call_later(1, send_ping, send_fd)
+    asyncio.get_event_loop().call_soon(check_timeouts)
     loop.run_forever()
