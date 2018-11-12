@@ -29,7 +29,7 @@ pacotes = {}
 
 
 # Coloque aqui o endereço de destino para onde você quer mandar o ping
-dest_addr = '192.168.0.1'
+dest_addr = '200.136.200.1'
 
 def addr2str(addr):
     return '%d.%d.%d.%d' % tuple(int(x) for x in addr)
@@ -78,10 +78,12 @@ def set_timer(pacote):
         pacote.timer = time.time()
     
 def check_timeouts():
+    removable = set()
     for id_pacote in pacotes:
         if time.time() - pacotes[id_pacote].timer > DATAGRAM_TIMEOUT:
-            del pacotes[id_pacote]
-    #print('Checando timeouts')
+            removable.add(id_pacote)
+        for id in removable:
+            del pacotes[id]
     asyncio.get_event_loop().call_later(1,check_timeouts)
 
 def raw_recv(recv_fd):
@@ -115,8 +117,7 @@ def raw_recv(recv_fd):
                     print('\tFonte:', src_addr)
                     print('\tIdentificador', identifier)
                     print('\ttamanho remontado:', len(pacote.buffer))
-                    print('\tTamanho dos dados: ', len(pacote.buffer))
-                    print('\tConteúdo: ', pacote.buffer)
+             #       print('\tConteúdo: ', pacote.buffer)
 
                     del pacotes[id_package]
                     print('\n')
@@ -127,7 +128,7 @@ def raw_recv(recv_fd):
             print('\tFonte: ', src_addr)
             print('\tIdentificador', identifier)
             print('\tTamanho dos dados: ', len(segment))
-            print('\tConteúdo: ', segment)
+          #  print('\tConteúdo: ', segment)
             print('\n')
 
 
