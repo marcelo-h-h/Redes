@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+#
+
+
 import socket
 import asyncio
 import struct
@@ -11,19 +17,19 @@ ICMP = 0x01  # https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
 
 
 # Coloque aqui o endereço de destino para onde você quer mandar o ping
-dest_ip = '186.219.82.1'
+dest_ip = '10.0.2.2'
 
 # Coloque abaixo o endereço IP do seu computador na sua rede local
-src_ip = '186.219.82.91'
+src_ip = '10.0.2.15'
 
 # Coloque aqui o nome da sua placa de rede
-if_name = 'wlan0'
+if_name = 'enp0s3'
 
 # Coloque aqui o endereço MAC do roteador da sua rede local (arp -a | grep _gateway)
-dest_mac = '44:31:92:b8:fa:99'
+dest_mac = '52:54:00:12:35:02'
 
 # Coloque aqui o endereço MAC da sua placa de rede (ip link show dev wlan0)
-src_mac = '34:02:86:2e:f9:19'
+src_mac = '08:00:27:a3:77:d1'
 
 
 
@@ -75,8 +81,14 @@ def send_ping(fd):
 
 def raw_recv(fd):
     frame = fd.recv(12000)
-    print('recebido quadro de %d bytes' % len(frame))
-    print(repr(frame))
+    #Realiza as verificações a partir do cabeçalho eth, verificando se o pacote está realmente
+    #endereçado para uma placa de rede deste computador, indicada em src_mac e se o protocolo é
+    #o protocolo ETH_P_IP
+    if(frame[:6] == mac_addr_to_bytes(src_mac)) and (struct.unpack('!H', frame[12:14])[0] == ETH_P_IP):
+        print('recebido quadro de %d bytes' % len(frame))
+    #print('começo', frame[:14])
+
+        print(repr(frame))
 
 
 def calc_checksum(segment):
