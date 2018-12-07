@@ -4,5 +4,4 @@
 
 ## Membros:
 #### Marcelo Oliveira 
-#### Isadora Gallerani
-#### Gabrieli Santos
+#### Matheus Bortoleto
