@@ -18,6 +18,7 @@ ICMP = 0x01  # https://en.wikipedia.org/wiki/List_of_IP_protocol_numbers
 
 
 # Coloque aqui o endereço de destino para onde você quer mandar o ping
+
 dest_ip = '10.0.2.2'
 
 # Coloque abaixo o endereço IP do seu computador na sua rede local
@@ -26,13 +27,16 @@ src_ip = '10.0.2.15'
 # Coloque aqui o nome da sua placa de rede
 if_name = 'enp0s3'
 
+
 # Coloque aqui o endereço MAC do roteador da sua rede local (arp -a | grep _gateway)
 dest_mac = '52:54:00:12:35:02'
 
 # Coloque aqui o endereço MAC da sua placa de rede (ip link show dev wlan0)
+
 src_mac = '08:00:27:a3:77:d1'
 
 FLAGS_MOREFRAGS = 1<<0
+
 
 
 class Package:
